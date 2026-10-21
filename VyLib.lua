@@ -4144,6 +4144,57 @@ local Library do
                 Items["MainFrame"]:MakeDraggable()
                 Items["MainFrame"]:MakeResizeable(Vector2New(_minW, _minH), Vector2New(9999, 9999))
 
+                -- Screen fit: on phones and in windowed mode the fixed-size window can be larger
+                -- than the viewport. A UIScale shrinks it (never enlarges) so it always fits,
+                -- and re-fits when the viewport or the window size changes. Opt out with
+                -- `AutoScale = false`; `MinScale` (default 0.4) caps how small it may get.
+                Items["FitScale"] = Instances:Create("UIScale", {
+                    Parent = Items["MainFrame"].Instance,
+                    Name = "\0",
+                    Scale = 1
+                })
+
+                Window.AutoScale = Data.AutoScale ~= false and Data.autoscale ~= false
+                Window.MinScale = tonumber(Data.MinScale or Data.minscale) or 0.4
+
+                function Window:FitToScreen()
+                    local Fit = Items["FitScale"].Instance
+
+                    if not Window.AutoScale or Window.IsMaximized then
+                        Fit.Scale = 1
+                        return 1
+                    end
+
+                    local Screen = Library.Holder.Instance.AbsoluteSize
+
+                    if Screen.X <= 0 or Screen.Y <= 0 then
+                        local Camera = Workspace.CurrentCamera
+                        Screen = Camera and Camera.ViewportSize or Screen
+                    end
+
+                    if Screen.X <= 0 or Screen.Y <= 0 then
+                        return Fit.Scale
+                    end
+
+                    local Frame = Items["MainFrame"].Instance
+                    local BaseW = math.max(1, Frame.Size.X.Offset)
+                    local BaseH = math.max(1, Frame.Size.Y.Offset)
+                    local Scale = math.min(1, (Screen.X - 24) / BaseW, (Screen.Y - 24) / BaseH)
+
+                    Fit.Scale = MathClamp(Scale, Window.MinScale, 1)
+                    return Fit.Scale
+                end
+
+                Window:FitToScreen()
+
+                Library:Connect(Library.Holder.Instance:GetPropertyChangedSignal("AbsoluteSize"), function()
+                    Window:FitToScreen()
+                end)
+
+                Library:Connect(Items["MainFrame"].Instance:GetPropertyChangedSignal("Size"), function()
+                    Window:FitToScreen()
+                end)
+
                 Items["Sidebar"] = Instances:Create("Frame", {
                     Parent = Items["MainFrame"].Instance,
                     Name = "\0",
@@ -5106,6 +5157,7 @@ local Library do
                 end
 
                 Window.IsMaximized = Bool
+                Window:FitToScreen()
 
                 if Items["ExpandIcon"] then
                     Items["ExpandIcon"].Instance.Image = self:ResolveIcon(Window.IsMaximized and "minimize-2" or "maximize-2")
