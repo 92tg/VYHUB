@@ -127,7 +127,7 @@ local Library do
         -- repeated these same values everywhere — now they live here and can be
         -- changed in one place.
         DefaultInfoSubtitle = "#1 Script HUB",
-        DefaultInfoCredits = { "Lead Developer: @dexz0", "UI Library: VyLib" },
+        DefaultInfoCredits = { "Lead Developer: @vy", "UI Library: VyLib" },
         DefaultDiscordLink = "https://discord.gg/CgxQjT2F9p",
 
         Flags = { },
@@ -498,23 +498,25 @@ local Library do
 -- [ modulo: Themes.lua ]
 -- ============================================================
 
-    -- Monochrome only. Accent is the one bright value (white on the dark
-    -- presets, black on Paper); AccentText is whatever stays readable on top
-    -- of it, for the toggle knob and filled chips.
+    -- Black & Orange. Every preset keeps a near-black (or, for Paper, a light)
+    -- surface stack and uses orange as the single accent; AccentText is
+    -- whatever stays readable on top of the orange, for the toggle knob and
+    -- filled chips. Outlines and muted text carry a faint warm tint so greys
+    -- do not look blue next to the orange.
     local Themes = {
         ["Onyx"] = {
             ["Background"]   = FromRGB(0, 0, 0),
             ["Panel"]        = FromRGB(8, 8, 8),
-            ["Surface"]      = FromRGB(13, 13, 13),
+            ["Surface"]      = FromRGB(14, 14, 14),
             ["Inline"]       = FromRGB(10, 10, 10),
-            ["Element"]      = FromRGB(20, 20, 20),
-            ["Outline"]      = FromRGB(48, 48, 48),
-            ["OutlineSoft"]  = FromRGB(28, 28, 28),
-            ["Accent"]       = FromRGB(255, 255, 255),
-            ["AccentSoft"]   = FromRGB(40, 40, 40),
+            ["Element"]      = FromRGB(22, 22, 22),
+            ["Outline"]      = FromRGB(62, 44, 26),
+            ["OutlineSoft"]  = FromRGB(34, 26, 18),
+            ["Accent"]       = FromRGB(255, 122, 0),
+            ["AccentSoft"]   = FromRGB(64, 34, 8),
             ["AccentText"]   = FromRGB(0, 0, 0),
             ["Text"]         = FromRGB(255, 255, 255),
-            ["TextMuted"]    = FromRGB(138, 138, 138)
+            ["TextMuted"]    = FromRGB(160, 142, 124)
         },
         ["Graphite"] = {
             ["Background"]   = FromRGB(16, 16, 16),
@@ -522,13 +524,13 @@ local Library do
             ["Surface"]      = FromRGB(28, 28, 28),
             ["Inline"]       = FromRGB(24, 24, 24),
             ["Element"]      = FromRGB(36, 36, 36),
-            ["Outline"]      = FromRGB(66, 66, 66),
-            ["OutlineSoft"]  = FromRGB(46, 46, 46),
-            ["Accent"]       = FromRGB(240, 240, 240),
-            ["AccentSoft"]   = FromRGB(58, 58, 58),
+            ["Outline"]      = FromRGB(74, 56, 40),
+            ["OutlineSoft"]  = FromRGB(48, 40, 32),
+            ["Accent"]       = FromRGB(255, 140, 26),
+            ["AccentSoft"]   = FromRGB(74, 44, 14),
             ["AccentText"]   = FromRGB(16, 16, 16),
             ["Text"]         = FromRGB(240, 240, 240),
-            ["TextMuted"]    = FromRGB(150, 150, 150)
+            ["TextMuted"]    = FromRGB(166, 150, 136)
         },
         ["Paper"] = {
             ["Background"]   = FromRGB(250, 250, 250),
@@ -536,13 +538,13 @@ local Library do
             ["Surface"]      = FromRGB(245, 245, 245),
             ["Inline"]       = FromRGB(252, 252, 252),
             ["Element"]      = FromRGB(236, 236, 236),
-            ["Outline"]      = FromRGB(200, 200, 200),
-            ["OutlineSoft"]  = FromRGB(226, 226, 226),
-            ["Accent"]       = FromRGB(0, 0, 0),
-            ["AccentSoft"]   = FromRGB(218, 218, 218),
+            ["Outline"]      = FromRGB(214, 196, 180),
+            ["OutlineSoft"]  = FromRGB(232, 222, 212),
+            ["Accent"]       = FromRGB(232, 96, 0),
+            ["AccentSoft"]   = FromRGB(255, 224, 196),
             ["AccentText"]   = FromRGB(255, 255, 255),
-            ["Text"]         = FromRGB(0, 0, 0),
-            ["TextMuted"]    = FromRGB(110, 110, 110)
+            ["Text"]         = FromRGB(20, 12, 4),
+            ["TextMuted"]    = FromRGB(128, 110, 96)
         },
     }
     Library.Themes = Themes  -- exposed for the Settings page dropdown
@@ -4298,7 +4300,7 @@ local Library do
                     Name = "\0",
                     FontFace = Library.BrandFont or Library.TitleFont or Library.Font,
                     Font = Library.BrandFontEnum or Library.TitleFontEnum or Enum.Font.GothamBold,
-                    TextColor3 = Library.Theme["Text"],
+                    TextColor3 = Library.Theme["Accent"],
                     BorderColor3 = FromRGB(0, 0, 0),
                     Text = BrandPrimary,
                     Size = UDim2.new(0, 0, 0, 32),
@@ -4309,7 +4311,7 @@ local Library do
                     TextSize = 36,
                     TextXAlignment = Enum.TextXAlignment.Left,
                     TextYAlignment = Enum.TextYAlignment.Center
-                }):AddToTheme({TextColor3 = 'Text'})
+                }):AddToTheme({TextColor3 = 'Accent'})
 
                 if BrandSecondary then
                     Items["TitleSecondary"] = Instances:Create("TextLabel", {
@@ -4317,7 +4319,7 @@ local Library do
                         Name = "\0",
                         FontFace = Library.BrandFont or Library.TitleFont or Library.Font,
                         Font = Library.BrandFontEnum or Library.TitleFontEnum or Enum.Font.GothamBold,
-                        TextColor3 = Library.Theme["Text"],
+                        TextColor3 = Library.Theme["Accent"],
                         BorderColor3 = FromRGB(0, 0, 0),
                         Text = BrandSecondary,
                         Size = UDim2.new(0, 0, 0, 32),
@@ -4328,7 +4330,7 @@ local Library do
                         TextSize = 36,
                         TextXAlignment = Enum.TextXAlignment.Left,
                         TextYAlignment = Enum.TextYAlignment.Center
-                    }):AddToTheme({TextColor3 = 'Text'})
+                    }):AddToTheme({TextColor3 = 'Accent'})
                 end
 
                 Items["CompactBadge"] = Instances:Create("TextLabel", {
@@ -4337,7 +4339,7 @@ local Library do
                     Visible = false,
                     FontFace = Library.BrandFont or Library.TitleFont or Library.Font,
                     Font = Library.BrandFontEnum or Library.TitleFontEnum or Enum.Font.GothamBold,
-                    TextColor3 = Library.Theme["Text"],
+                    TextColor3 = Library.Theme["Accent"],
                     BorderColor3 = FromRGB(0, 0, 0),
                     Text = CompactTitle ~= "" and CompactTitle or tostring(Window.Name):sub(1, 1),
                     Size = UDim2.new(0, 0, 0, 24),
@@ -4349,7 +4351,7 @@ local Library do
                     TextSize = 22,
                     TextXAlignment = Enum.TextXAlignment.Center,
                     TextYAlignment = Enum.TextYAlignment.Center
-                }):AddToTheme({TextColor3 = 'Text'})
+                }):AddToTheme({TextColor3 = 'Accent'})
 
                 Items["PagesCard"] = Instances:Create("Frame", {
                     Parent = Items["Sidebar"].Instance,
@@ -8857,6 +8859,14 @@ end
 local OriginalWindowFunction = Library.Window
 Library.Window = function(self, Data)
     Data = Data or {}
+
+    -- `Theme = "Onyx"` picks a preset before anything is drawn, so the window
+    -- is built in its colours instead of being recoloured afterwards. An
+    -- unknown name is ignored and the current theme (Onyx) stays.
+    local ThemeName = Data.Theme or Data.theme
+    if type(ThemeName) == "string" and ThemeName ~= "" then
+        pcall(function() self:ApplyThemePreset(ThemeName) end)
+    end
 
     if Data.HideLogo or Data.hidelogo or Data.Logo == false or Data.logo == false then
         Data.Logo = nil
