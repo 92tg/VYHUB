@@ -1,6 +1,3 @@
--- ============================================================
--- [ modulo: Header.lua ]
--- ============================================================
 
 if getgenv().Library then
     getgenv().Library:Unload()
@@ -109,9 +106,6 @@ local Library do
 
     local RectNew = Rect.new
 
--- ============================================================
--- [ modulo: LibraryTable.lua ]
--- ============================================================
 
     Library = {
         Theme =  { },
@@ -123,9 +117,6 @@ local Library do
         DefaultHeaderLogo = "rbxassetid://75802679174420",
         DefaultHeaderLogoSize = 52,
 
-        -- Info page defaults (Window:CreateInfoPage). The hub scripts
-        -- repeated these same values everywhere — now they live here and can be
-        -- changed in one place.
         DefaultInfoSubtitle = "#1 Script HUB",
         DefaultInfoCredits = { "Lead Developer: @vy", "UI Library: VyLib" },
         DefaultDiscordLink = "https://discord.gg/CgxQjT2F9p",
@@ -149,7 +140,6 @@ local Library do
             Settings = "VYHUB/Settings",
         },
 
-        -- Ignore below
         Pages = { },
         Sections = { },
 
@@ -196,29 +186,8 @@ local Library do
         return UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
     end
 
--- ============================================================
--- [ modulo: Storage.lua ]
--- ============================================================
 
 
-    -- ══════════════════════════════════════════════════════════════════════
-    -- Storage — persistence that adapts to the executor
-    -- ══════════════════════════════════════════════════════════════════════
-    -- Not every executor has a working file sandbox. Solara, for one, resolves a
-    -- relative path from the process CWD (C:/Windows/System32/workspace/...),
-    -- where creating a folder is denied — and a bare `makefolder` at boot killed
-    -- the loadstring of the whole lib.
-    --
-    -- Instead of assuming subfolders, the lib PROBES at startup (writes, reads
-    -- back and deletes a test file) and keeps the first strategy that works:
-    --
-    --   "folders" — VYHUB/Configs/name.json          (ideal)
-    --   "flat"    — VYHUB_Configs_name.json          (no makefolder)
-    --   "memory"  — session only, gone on close      (last resort)
-    --
-    -- "flat" is what genuinely supports anyone who only fails at
-    -- create_directories but writes files fine. "memory" still allows saving and
-    -- switching configs within the session instead of the Configs tab being dead.
     Library.Storage = {
         Mode = "memory",
         Memory = { },
@@ -234,8 +203,6 @@ local Library do
                 and type(isfile) == "function"
         end
 
-        -- The real path of an item under the current mode. `Kind` is a key of
-        -- Library.Folders: "Configs" | "Assets" | "Settings".
         function Library:FilePath(Kind, Name)
             Kind = tostring(Kind or "Configs")
             Name = tostring(Name or "")
@@ -291,7 +258,6 @@ local Library do
             return (pcall(delfile, self:FilePath(Kind, Name)))
         end
 
-        -- Nomes dos itens de um Kind, sem o caminho e sem o prefixo do modo.
         function Library:FileList(Kind)
             local Out = { }
 
@@ -311,7 +277,6 @@ local Library do
                 return Out
             end
 
-            -- In flat mode everything lives in the same folder, so filter by prefix.
             local Where = Storage.Mode == "flat" and "" or (Storage.Root .. "/" .. Kind)
             local Success, List = pcall(listfiles, Where)
 
@@ -322,7 +287,6 @@ local Library do
             local FlatPrefix = Storage.Root .. "_" .. Kind .. "_"
 
             for _, Path in next, List do
-                -- listfiles returns a full path; keep only the file name
                 local File = tostring(Path):match("[^/\\]+$")
 
                 if File then
@@ -339,10 +303,6 @@ local Library do
             return Out
         end
 
-        -- ── Probe ─────────────────────────────────────────────────────────
-        -- Write, read back and delete. "Wrote with no error" is not enough: on an
-        -- executor with a broken sandbox the writefile passes and the file does not
-        -- exist afterwards.
         local function Probe()
             local Name = "vylib_probe.txt"
             local Stamp = "vy"
@@ -358,7 +318,6 @@ local Library do
         end
 
         if HasFunctions() then
-            -- 1) subpastas
             if type(makefolder) == "function" and type(isfolder) == "function" then
                 local Made = true
 
@@ -389,7 +348,6 @@ local Library do
                 end
             end
 
-            -- 2) everything at the root, creating no folder at all
             if Storage.Mode ~= "folders" then
                 Storage.Mode = "flat"
 
@@ -399,11 +357,6 @@ local Library do
             end
         end
 
-        -- Compat: hub scripts build paths by hand from here
-        -- (`Library.Folders.Configs .. "/" .. name`). Nothing inside the lib does that
-        -- any more — everything goes through FilePath/FileWrite/FileRead, which is the
-        -- only way flat mode works. Here the values become each mode's REAL directory,
-        -- so that external concatenation still lands somewhere writable.
         if Storage.Mode == "flat" then
             Library.Folders = {
                 Directory = "",
@@ -413,12 +366,8 @@ local Library do
             }
         end
 
-        -- For anyone who just wants to know "can this persist between sessions?".
         Library.FileSystemReady = Storage.Mode ~= "memory"
     end
--- ============================================================
--- [ modulo: Keys.lua ]
--- ============================================================
 
     local Keys = {
         ["Unknown"]           = "Unknown",
@@ -494,15 +443,7 @@ local Library do
         ["RightAlt"]          = "RightAlt"
     }
 
--- ============================================================
--- [ modulo: Themes.lua ]
--- ============================================================
 
-    -- Black & Orange. Every preset keeps a near-black (or, for Paper, a light)
-    -- surface stack and uses orange as the single accent; AccentText is
-    -- whatever stays readable on top of the orange, for the toggle knob and
-    -- filled chips. Outlines and muted text carry a faint warm tint so greys
-    -- do not look blue next to the orange.
     local Themes = {
         ["Onyx"] = {
             ["Background"]   = FromRGB(0, 0, 0),
@@ -547,7 +488,7 @@ local Library do
             ["TextMuted"]    = FromRGB(128, 110, 96)
         },
     }
-    Library.Themes = Themes  -- exposed for the Settings page dropdown
+    Library.Themes = Themes
 
     function Library:ApplyThemePreset(name)
         local preset = Themes[name]
@@ -561,7 +502,6 @@ local Library do
     end
 
     function Library:SetBackgroundImage(assetIdOrUrl, transparency)
-        -- Accepts rbxassetid://N, a number, or an http URL
         local imageId = assetIdOrUrl
         if type(imageId) == "number" then
             imageId = "rbxassetid://" .. tostring(imageId)
@@ -597,20 +537,14 @@ local Library do
     Library.Theme = TableClone(Themes["Onyx"])
     Library.CurrentThemeName = "Onyx"
 
-    -- (folder creation moved house: it became the Storage module, which probes
-    -- what the executor accepts and picks between subfolder, prefix or memory.)
 
     local AutoExecGuardKey = "VyLib_AutoExecGuard"
     local AutoExecSourceKeys = {
         { Script = "VyLib_AutoExecScript", Url = "VyLib_AutoExecURL", File = "VyLib_AutoExecFile" },
         { Script = "VyHub_AutoExecScript", Url = "VyHub_AutoExecURL", File = "VyHub_AutoExecFile" }
     }
--- ============================================================
--- [ modulo: Tween.lua ]
--- ============================================================
 
 
-    -- Tweening
     local FadePropertyStates = setmetatable({ }, { __mode = "k" })
 
     local Tween = { } do
@@ -749,12 +683,8 @@ local Library do
             self = nil
         end
     end
--- ============================================================
--- [ modulo: Instances.lua ]
--- ============================================================
 
 
-    -- Instances
     local Instances = { } do
         Instances.__index = Instances
 
@@ -881,8 +811,6 @@ local Library do
                 local NewLeft = (StartAbsolutePosition.X - ParentPosition.X) + DragDelta.X
                 local NewTop = (StartAbsolutePosition.Y - ParentPosition.Y) + DragDelta.Y
 
-                -- Allows dragging off screen, but keeps at least 40px visible on each side
-                -- so the window is not lost permanently.
                 local Margin = 40
                 NewLeft = MathClamp(NewLeft, -(GuiSize.X - Margin), ParentSize.X - Margin)
                 NewTop = MathClamp(NewTop, -(GuiSize.Y - Margin), ParentSize.Y - Margin)
@@ -897,8 +825,6 @@ local Library do
         
             self:Connect("InputBegan", function(Input)
                 if Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch then
-                    -- Optional hook: called BEFORE capturing the initial position.
-                    -- Used by Window to unmaximise when the user drags.
                     if self.OnDragStarted then
                         self.OnDragStarted(Input)
                     end
@@ -1002,7 +928,6 @@ local Library do
 
                 StartMouse = UserInputService:GetMouseLocation()
 
-                -- store offsets, not absolute screen pos
                 StartPosition = Vector2New(Gui.Position.X.Offset, Gui.Position.Y.Offset)
                 StartSize = Vector2New(Gui.Size.X.Offset, Gui.Size.Y.Offset)
                 
@@ -1094,20 +1019,10 @@ local Library do
             return Library:Connect(self.Instance.MouseLeave, Function)
         end
     end
--- ============================================================
--- [ modulo: Font.lua ]
--- ============================================================
 
 
-    -- Custom font
     local CustomFont = { } do
-        -- Downloads the font and registers it as an asset. Returns nil (rather than
-        -- throwing) when the executor will not let us write files — see
-        -- `FileSystemReady` in Themes.lua. Without this the whole lib died at boot on
-        -- an executor with no file sandbox.
         function CustomFont:New(Name, Weight, Style, Data)
-            -- `getcustomasset` needs a REAL file on disk, so Storage's "memory" mode is
-            -- no good here.
             if not Library.FileSystemReady or type(getcustomasset) ~= "function" then
                 return nil
             end
@@ -1149,7 +1064,6 @@ local Library do
             Url = "https://github.com/sametexe001/luas/raw/refs/heads/main/fonts/Outfit-Medium.ttf"
         })
 
-        -- Without the custom font the UI still has to come up: fall back to a native one.
         if not Library.Font then
             local BuiltinSuccess, Builtin = pcall(function()
                 return Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Medium, Enum.FontStyle.Normal)
@@ -1175,9 +1089,6 @@ local Library do
         Library.BrandFont = BrandFontSuccess and BrandFont or Library.TitleFont
         Library.BrandFontEnum = Library.TitleFontEnum
     end
--- ============================================================
--- [ modulo: Holders.lua ]
--- ============================================================
 
 
     Library.Holder = Instances:Create("ScreenGui", {
@@ -1212,14 +1123,9 @@ local Library do
         Enabled = false,
         ResetOnSpawn = false
     })
--- ============================================================
--- [ modulo: NotificationState.lua ]
--- ============================================================
 
 
     local NotificationCards = { }
-    -- Mobile: narrower so the notification card doesn't get clipped on the
-    -- left edge of phones (~360px wide). Desktop keeps the original 312.
     local NotificationWidth = Library:IsMobileClient() and 260 or 312
     local NotificationMinHeight = 82
     local NotificationGap = 12
@@ -1269,9 +1175,6 @@ local Library do
             end
         end
     end
--- ============================================================
--- [ modulo: Unload.lua ]
--- ============================================================
 
 
     Library.Unload = function(self)
@@ -1318,9 +1221,6 @@ local Library do
 
         return Callback
     end
--- ============================================================
--- [ modulo: Utils.lua ]
--- ============================================================
 
 
     Library.Round = function(self, Number, Float)
@@ -1329,8 +1229,6 @@ local Library do
     end
 
     Library.Thread = function(self, Function)
-        -- Guard: callbacks opcionais (ex: AddToggle sem Callback) chegam nil aqui.
-        -- Without this coroutine.create(nil) blows up with "function expected, got nil".
         if type(Function) ~= "function" then
             return nil
         end
@@ -1385,24 +1283,12 @@ local Library do
     end
 
     Library.NextFlag = function(self)
-        -- Increment a session counter and return a DETERMINISTIC flag id.
-        -- The previous version appended a per-call GUID, which made every
-        -- reload generate new flag names — so saved configs never matched
-        -- the widgets on autoload (the values existed in the JSON but
-        -- Library.SetFlags[Index] was nil for the new GUID-suffixed names).
-        -- Widgets are created in a fixed order per script run, so a plain
-        -- counter is stable across reloads.
         self.UnnamedFlags = (self.UnnamedFlags or 0) + 1
         return StringFormat("flag_number_%d", self.UnnamedFlags)
     end
--- ============================================================
--- [ modulo: ThemeFlags.lua ]
--- ============================================================
 
 
     Library.AddToTheme = function(self, Item, Properties)
-        -- Accepts lib wrappers (with .Instance) OR raw Roblox instances.
-        -- Reading .Instance on a raw instance errors, so check the type first.
         if type(Item) == "table" and Item.Instance then
             Item = Item.Instance
         end
@@ -1451,9 +1337,6 @@ local Library do
     Library.ShouldIgnoreFlag = function(self, Flag)
         return self.IgnoredFlags[Flag] == true
     end
--- ============================================================
--- [ modulo: Config.lua ]
--- ============================================================
 
 
     Library.GetConfig = function(self)
@@ -1478,19 +1361,11 @@ local Library do
         return HttpService:JSONEncode(Config)
     end
 
-    -- `OnlyThese` (optional) is a set of flag names: when given, only those
-    -- indices are processed. It is what lets autoload repeat the pass over the
-    -- SKIPPED ones without re-applying what already landed — see `ScheduleAutoload`.
     Library.LoadConfig = function(self, Config, OnlyThese)
         local Decoded = HttpService:JSONDecode(Config)
 
-        -- Count returned to the caller. This used to be silent: a flag that no longer
-        -- existed was skipped without a trace, and "the config does not load" arrived
-        -- as a report with not a single clue where to look.
         local Applied, Skipped, Failed = 0, 0, 0
 
-        -- WHICH ones were skipped, not just how many. Without the names autoload has
-        -- no way to retry only what was missing.
         local SkippedKeys = { }
 
         local Success, Result = Library:SafeCall(function()
@@ -1511,10 +1386,6 @@ local Library do
                     continue
                 end
 
-                -- One pcall PER FLAG. The whole loop used to live inside a single SafeCall:
-                -- ONE element throwing partway through lost every following flag at once. And
-                -- since the order comes from the decoded JSON (a hash), which ones were lost
-                -- changed on each load — hence the symptom "sometimes it loads".
                 local Ok = pcall(function()
                     if type(Value) == "table" and Value.Key then
                         SetFunction(Value)
@@ -1546,9 +1417,6 @@ local Library do
         return self:FileDelete("Configs", Config)
     end
 
-    -- Names of the saved configs, without the extension. Storage already returns
-    -- just the file name and already handles the current mode (subfolder, prefix
-    -- or memory).
     Library.RefreshConfigsList = function(self, Element)
         local ReturnList = { }
 
@@ -1566,9 +1434,6 @@ local Library do
 
         return ReturnList
     end
--- ============================================================
--- [ modulo: ExecutorSettings.lua ]
--- ============================================================
 
 
     Library.GetExecutorSettingsPath = function(self)
@@ -1893,8 +1758,6 @@ local Library do
         local Success, Result, Stats = self:LoadConfig(RawConfig)
         if Success then
             self._AutoLoadApplied = true
-            -- The raw config travels along so the caller can re-feed the skipped ones
-            -- later without re-reading the file.
             if Stats then
                 Stats.Raw = RawConfig
             end
@@ -1920,10 +1783,6 @@ local Library do
                     warn("[vylib] autoload failed:", Result)
                 end
 
-                -- This was the only completely silent path: no console, no screen. The label
-                -- kept saying "Autoload • <name>", nothing happened, and whoever reported it
-                -- had no line to quote. It is exactly the shape of the report that came in
-                -- ("it says that my auto load is set" + it does not load), so now it speaks.
                 if Result == "autoload config missing" then
                     self:Notification("Autoload",
                         StringFormat("%q is set to autoload, but its config file is gone.",
@@ -1933,29 +1792,8 @@ local Library do
                 return
             end
 
-            -- Always to the console, to give something to ask about when someone reports
-            -- "it did not load". On screen only when something actually went wrong —
-            -- announcing a successful autoload on every join would be noise.
             Stats = Stats or { Applied = 0, Skipped = 0, Failed = 0 }
 
-            -- ── A second chance for the skipped ones ────────────────────────────
-            -- `ScheduleAutoload` runs at the end of `CreateWindow`, i.e. BEFORE the
-            -- script has created a single tab: at that moment `SetFlags` only holds the
-            -- Settings page's own flags. `WaitForFlagRegistration` exists to cover that,
-            -- but it gives up once the count sits still for 0.3s (3 ticks) — and on a
-            -- cold join, which is exactly the reported case ("rollback and restart"), UI
-            -- construction stalls longer than that partway through.
-            --
-            -- Then the config was applied against a nearly empty `SetFlags`, EVERYTHING
-            -- fell into "skipped", and since `LoadConfig` reports SUCCESS even having
-            -- skipped everything, `_AutoLoadApplied = true` shut the door for the rest of
-            -- the session. Symptom: "it says autoload is set and it does not load".
-            --
-            -- Only the SKIPPED ones go back in the queue. Re-applying the whole config
-            -- would be wrong: `Toggle:Set` fires the Callback even for an unchanged
-            -- value, so anything already applied would re-fire and whatever the user
-            -- changed by hand between attempts would be undone. A skipped flag was never
-            -- applied — repeating it steps on nothing.
             local Pending = Stats.SkippedKeys
 
             if Stats.Raw and Pending and #Pending > 0 then
@@ -1965,8 +1803,6 @@ local Library do
                 repeat
                     task.wait(0.5)
 
-                    -- With no new flag registered since the last pass there is nothing to try:
-                    -- skip the JSONDecode instead of repeating it for nothing.
                     local FlagCount = self:CountSetFlags()
 
                     if FlagCount ~= LastFlagCount then
@@ -1987,8 +1823,6 @@ local Library do
                     end
                 until #Pending == 0 or os.clock() >= Deadline
 
-                -- What is left here is genuinely skipped: a flag this script really does not
-                -- have (a config saved in another game, a removed widget).
                 Stats.Skipped = #Pending
             end
             warn(StringFormat("[vylib] autoload %q: %d applied, %d skipped, %d failed",
@@ -2006,9 +1840,6 @@ local Library do
 
     Library:LoadExecutorSettings()
     Library:RefreshAutoExecQueue()
--- ============================================================
--- [ modulo: ThemeChange.lua ]
--- ============================================================
 
 
     Library.ChangeItemTheme = function(self, Item, Properties)
@@ -2039,9 +1870,6 @@ local Library do
             end
         end
     end
--- ============================================================
--- [ modulo: Notification.lua ]
--- ============================================================
 
 
     Library.Notification = function(self, Title, Description, Duration)
@@ -2387,7 +2215,6 @@ local Library do
             })
 
             SlideTween:Play()
-            -- Tracked + one-shot: avoids firing after Library:Unload touches Items["Card"]
             local slideConn
             slideConn = Library:Connect(SlideTween.Completed, function()
                 if slideConn and slideConn.Connection then
@@ -2516,16 +2343,9 @@ local Library do
             end
         end
     end
--- ============================================================
--- [ modulo: Colorpicker.lua ]
--- ============================================================
 
 
     Library.CreateColorpicker = function(self, Data)
-        -- Alpha here is TRANSPARENCY, not opacity: 0 = solid, 1 = invisible.
-        -- Every picker ships the bar: palette + hue + alpha is the default shape.
-        -- Passing a number only changes the starting value; `Alpha = false` is the
-        -- opt-out, for when transparency means nothing wherever the colour lands.
         local AlphaEnabled = Data.Alpha ~= false
 
         local Colorpicker = {
@@ -2740,8 +2560,6 @@ local Library do
             })
 
             if AlphaEnabled then
-                -- The bar is only the hit area; the two layers below draw it.
-                -- Kept transparent so it does not paint over them.
                 Items["Alpha"] = Instances:Create("TextButton", {
                     Parent = Items["ColorpickerWindow"].Instance,
                     Name = "\0",
@@ -2759,10 +2577,6 @@ local Library do
                     BackgroundColor3 = FromRGB(255, 255, 255)
                 })
 
-                -- Layer 1, the backdrop. Without it the transparent half of the bar
-                -- falls straight onto the menu background and disappears, which is
-                -- exactly why the bar went unnoticed at first. The light/dark gradient
-                -- keeps contrast against any chosen colour, light or dark.
                 Items["AlphaBackdrop"] = Instances:Create("Frame", {
                     Parent = Items["Alpha"].Instance,
                     Name = "\0",
@@ -2785,10 +2599,6 @@ local Library do
                     CornerRadius = UDimNew(0, 6)
                 })
 
-                -- Layer 2, the chosen colour going from solid (top) to transparent
-                -- (bottom). The transparency comes from the gradient and not from
-                -- BackgroundTransparency: the open/close fade sweeps every descendant
-                -- touching that property and would wipe the effect out.
                 Items["AlphaFill"] = Instances:Create("Frame", {
                     Parent = Items["Alpha"].Instance,
                     Name = "\0",
@@ -2838,8 +2648,6 @@ local Library do
                     Name = "\0"
                 })
 
-                -- Without a number on screen a value cannot be reproduced: for ESP
-                -- someone wants 0.35 again in the next game, not "roughly there".
                 Items["AlphaReadout"] = Instances:Create("TextLabel", {
                     Parent = Items["ColorpickerWindow"].Instance,
                     Name = "\0",
@@ -2878,8 +2686,6 @@ local Library do
                 Items["AlphaFill"]:Tween(nil, {BackgroundColor3 = Colorpicker.Color})
             end
 
-            -- Shows the raw alpha, the same number that reaches the callback and
-            -- the config. A percentage would force a conversion in the reader's head.
             if Items["AlphaReadout"] then
                 Items["AlphaReadout"].Instance.Text = string.format(
                     "#%s  -  alpha %.2f", Colorpicker.HexValue, Colorpicker.Alpha
@@ -3016,7 +2822,6 @@ local Library do
                 end
             end
             
-            -- Tracked + one-shot: avoids touching Items["ColorpickerWindow"] after Unload
             local fadeConn
             fadeConn = Library:Connect(NewTween.Tween.Completed, function()
                 if fadeConn and fadeConn.Connection then
@@ -3164,21 +2969,15 @@ local Library do
         if Data.Default then
             Colorpicker:Set(Data.Default)
         elseif AlphaEnabled and Colorpicker.Alpha > 0 then
-            -- No default colour but a starting alpha: needs a Set to place the
-            -- dragger correctly and publish the alpha into the flag.
             Colorpicker:Set(Colorpicker.Color)
         end
 
-        -- Config calls this as SetFunction(Value.Color, Value.Alpha).
         Library.SetFlags[Colorpicker.Flag] = function(Value, Alpha)
             Colorpicker:Set(Value, Alpha)
         end
 
         return Colorpicker, Items 
     end
--- ============================================================
--- [ modulo: Keybind.lua ]
--- ============================================================
 
 
     Library.CreateKeybind = function(self, Data)
@@ -3503,10 +3302,6 @@ local Library do
 
             Items["KeyButton"].Instance.Text = "..."
 
-            -- Snapshot which mouse buttons / inputs are currently held, so the
-            -- input that opened the picker (e.g. the right-click on a toggle)
-            -- doesn't get captured as the bind. We only accept an input once
-            -- it has BEGAN AFTER any currently-held inputs are released.
             local heldUITypes = {}
             for _, inp in ipairs(UserInputService:GetMouseButtonsPressed()) do
                 heldUITypes[inp.UserInputType] = true
@@ -3516,10 +3311,7 @@ local Library do
             local startedAt = os.clock()
 
             InputBegan = UserInputService.InputBegan:Connect(function(Input)
-                -- Ignore the very first frame's events (the trigger click).
                 if os.clock() - startedAt < 0.05 then return end
-                -- Ignore any input type that was held when picker opened
-                -- until it's released and pressed fresh.
                 if heldUITypes[Input.UserInputType] then return end
 
                 if Input.UserInputType == Enum.UserInputType.Keyboard then
@@ -3535,7 +3327,6 @@ local Library do
                 end
             end)
 
-            -- When the trigger button is released, allow re-pressing it as a bind.
             local InputEnded
             InputEnded = UserInputService.InputEnded:Connect(function(Input)
                 if heldUITypes[Input.UserInputType] then
@@ -3642,9 +3433,6 @@ local Library do
         
         return Keybind, Items 
     end
--- ============================================================
--- [ modulo: Watermark.lua ]
--- ============================================================
 
 
     do 
@@ -3731,9 +3519,6 @@ local Library do
 
             return Watermark 
         end
--- ============================================================
--- [ modulo: KeybindList.lua ]
--- ============================================================
 
 
         Library.KeybindList = function(self, Window, Data)
@@ -3945,9 +3730,6 @@ local Library do
 
             return KeybindList
         end
--- ============================================================
--- [ modulo: ToggleButton.lua ]
--- ============================================================
 
 
         Library.ToggleButton = function(self, Window, Data)
@@ -4055,9 +3837,6 @@ local Library do
             ToggleButton:SetIcon(Data.Icon)
             return ToggleButton
         end
--- ============================================================
--- [ modulo: Window.lua ]
--- ============================================================
 
 
         Library.Window = function(self, Data)
@@ -4082,7 +3861,6 @@ local Library do
                 IsMaximized = false,
                 IsSidebarCollapsed = false,
                 SidebarCollapseEnabled = Data.SidebarCollapseEnabled ~= false and Data.sidebarcollapseenabled ~= false,
-                -- Mobile defaults (smaller widget) — overridable via Data.*
                 ExpandedSidebarWidth = Data.SidebarWidth or Data.sidebarwidth or (Library:IsMobileClient() and 170 or 240),
                 CollapsedSidebarWidth = Data.CollapsedSidebarWidth or Data.collapsedsidebarwidth or (Library:IsMobileClient() and 52 or 72),
                 SidebarGap = Data.SidebarGap or Data.sidebargap or (Library:IsMobileClient() and 8 or 12),
@@ -4122,9 +3900,6 @@ local Library do
             local SubtitleRightInset = WindowControlsWidth + 68
             local ContentOffset = Window.ExpandedSidebarWidth + Window.SidebarGap
 
-            -- Mobile: smaller window so it fits on phones/tablets without
-            -- requiring the user to resize manually. Min size also smaller
-            -- so user can shrink further if desired.
             local _isMobileWin = Library:IsMobileClient()
             local _winW = _isMobileWin and 560 or 960
             local _winH = _isMobileWin and 360 or 560
@@ -4146,10 +3921,6 @@ local Library do
                 Items["MainFrame"]:MakeDraggable()
                 Items["MainFrame"]:MakeResizeable(Vector2New(_minW, _minH), Vector2New(9999, 9999))
 
-                -- Screen fit: on phones and in windowed mode the fixed-size window can be larger
-                -- than the viewport. A UIScale shrinks it (never enlarges) so it always fits,
-                -- and re-fits when the viewport or the window size changes. Opt out with
-                -- `AutoScale = false`; `MinScale` (default 0.4) caps how small it may get.
                 Items["FitScale"] = Instances:Create("UIScale", {
                     Parent = Items["MainFrame"].Instance,
                     Name = "\0",
@@ -4394,8 +4165,6 @@ local Library do
                 Instances:Create("UIListLayout", {
                     Parent = Items["Pages"].Instance,
                     Name = "\0",
-                    -- Match inner-group button padding (4) so tabs across
-                    -- different groups look identical to tabs in same group.
                     Padding = UDimNew(0, 4),
                     SortOrder = Enum.SortOrder.LayoutOrder
                 })
@@ -4543,11 +4312,6 @@ local Library do
                     BorderSizePixel = 0
                 })
 
-                -- ── Sub-tab flyout ───────────────────────────────────────
-                -- With the sidebar collapsed there is no room for the inline accordion, so
-                -- the sub-tabs come out in a floating panel beside the tab's icon. The
-                -- SubList is reparented here (same buttons, same state) and handed back on
-                -- close.
                 Items["Flyout"] = Instances:Create("Frame", {
                     Parent = Items["MainFrame"].Instance,
                     Name = "\0",
@@ -4608,10 +4372,6 @@ local Library do
                     ZIndex = 61
                 }):AddToTheme({TextColor3 = 'TextMuted'})
 
-                -- ── Loading overlay ──────────────────────────────────────
-                -- Sits on top of every Window child while the host script is
-                -- adding tabs/sections. Hidden by Window:HideLoading() — or
-                -- auto-fades after 4s as a safety net.
                 Items["LoadingOverlay"] = Instances:Create("Frame", {
                     Parent = Items["MainFrame"].Instance,
                     Name = "\0",
@@ -4668,7 +4428,6 @@ local Library do
                     ZIndex = 101,
                 }):AddToTheme({TextColor3 = 'TextMuted'})
 
-                -- Tiny animated dots after the subtitle text
                 task.spawn(function()
                     local dots = {"", ".", "..", "..."}
                     local i = 1
@@ -4696,8 +4455,6 @@ local Library do
 
                 Window.SidebarGroupCount += 1
 
-                -- Group labels disabled: tabs render as a flat list with no
-                -- "Settings" / category headers between them.
                 local HasLabel = false
                 local GroupItems = { } do
                     GroupItems["Group"] = Instances:Create("Frame", {
@@ -4763,12 +4520,6 @@ local Library do
                 return GroupItems
             end
 
-            -- ══════════════════════════════════════════════════════════════
-            -- Panes (tabs + sub-tabs)
-            -- ══════════════════════════════════════════════════════════════
-            -- A "pane" is anything occupying the content area: a tab with no children, or
-            -- a sub-tab. Activation is centralised here so the accordion, the rail and the
-            -- sidebar highlights stay in sync with what is on screen.
 
             function Window:RegisterPane(Pane)
                 if type(Pane) ~= "table" then
@@ -4784,8 +4535,6 @@ local Library do
                     return
                 end
 
-                -- Clicking a tab that only acts as a container opens the sub-tab that was
-                -- active last (or the first one).
                 if type(Pane.GetDefaultPane) == "function" then
                     Pane = Pane:GetDefaultPane() or Pane
                 end
@@ -4846,12 +4595,7 @@ local Library do
                 return Pane
             end
 
-            -- ══════════════════════════════════════════════════════════════
-            -- Flyout de sub-tabs (sidebar colapsada)
-            -- ══════════════════════════════════════════════════════════════
 
-            -- The ScreenGui uses ZIndexBehavior.Global, so the floating panel only sits in
-            -- front if all its descendants rise with it.
             function Window:ApplyFlyoutZIndex(Root, Value)
                 if not Root then
                     return
@@ -4922,8 +4666,6 @@ local Library do
 
                 Items["FlyoutTitle"].Instance.Text = tostring(Page.Name or "")
 
-                -- AutomaticSize.Y only resolves next frame, so the height for the clamp is
-                -- computed by hand.
                 local FlyoutHeight = 20 + 14 + 6 + (Count * Metrics.Height) + ((Count - 1) * Metrics.Gap)
                 local MainFrame = Items["MainFrame"].Instance
                 local Button = Page.Items["Inactive"].Instance
@@ -4950,7 +4692,6 @@ local Library do
                 Window:OpenFlyout(Page)
             end
 
-            -- Clique fora fecha o flyout.
             Library:Connect(UserInputService.InputBegan, function(Input)
                 if not Window.FlyoutPage then
                     return
@@ -4972,7 +4713,6 @@ local Library do
                     return
                 end
 
-                -- The tab's own button is handled by its own handler (toggle).
                 local Button = Window.FlyoutPage.Items["Inactive"].Instance
                 local ButtonTopLeft = Button.AbsolutePosition
                 local ButtonBottomRight = ButtonTopLeft + Button.AbsoluteSize
@@ -5093,8 +4833,6 @@ local Library do
                         Window:RefreshSidebarPageLayout(Page)
                     end
 
-                    -- Collapsing the sidebar closes the inline accordion (no room for it);
-                    -- expanding back reopens the active tab's.
                     if type(Page.RefreshSubHolder) == "function" then
                         Page:RefreshSubHolder(false)
                     end
@@ -5193,10 +4931,6 @@ local Library do
                 Window:SetMaximized(not Window.IsMaximized)
             end
 
-            -- When the user drags a maximised window, it returns to its previous size and
-            -- ends up positioned under the cursor — standard OS window behaviour
-            -- (Windows/macOS). The position is set immediately (so MakeDraggable's drag
-            -- maths captures the right point), but the size animates smoothly.
             Items["MainFrame"].OnDragStarted = function(Input)
                 if not Window.IsMaximized then
                     return
@@ -5215,8 +4949,6 @@ local Library do
                     TargetWidth = Frame.AbsoluteSize.X
                 end
 
-                -- Places the window with the cursor near the centre of the title bar —
-                -- instantly, so as not to break the drag delta capture.
                 local AnchorOffsetX = TargetWidth * Frame.AnchorPoint.X
                 local AnchorOffsetY = 20 * Frame.AnchorPoint.Y
                 local NewX = Input.Position.X - (TargetWidth / 2) + AnchorOffsetX
@@ -5224,8 +4956,6 @@ local Library do
 
                 Frame.Position = UDim2FromOffset(NewX, math.max(0, NewY))
 
-                -- Tween the Size only (the position is being updated by the drag, so it cannot
-                -- be animated without conflicting with MakeDraggable).
                 TweenService:Create(
                     Frame,
                     TweenInfo.new(0.22, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
@@ -5297,24 +5027,16 @@ local Library do
             Window:SetOpen(true)
             return setmetatable(Window, Library)
         end
--- ============================================================
--- [ modulo: Page.lua ]
--- ============================================================
 
 
-        -- ══════════════════════════════════════════════════════════════════
-        -- Accordion metrics (parent tab -> sub-tabs). They live on the Library and
-        -- not in locals because SubTab.lua is another module of the bundle and needs
-        -- the same numbers to position the rail/thumb.
-        -- ══════════════════════════════════════════════════════════════════
         Library.SubTabMetrics = {
-            Height      = 30,   -- height of each sub-tab button
-            Gap         = 3,    -- vertical gap between sub-tabs
+            Height      = 30,
+            Gap         = 3,
             PadTop      = 4,
             PadBottom   = 6,
-            RailX       = 23,   -- aligned with the parent tab icon centre (16 + 16/2)
-            IndentLeft  = 34,   -- indent of the sub-tab buttons
-            ThumbWidth  = 3,    -- marcador deslizante: 1px mais grosso que o rail
+            RailX       = 23,
+            IndentLeft  = 34,
+            ThumbWidth  = 3,
             ThumbHeight = 16
         }
 
@@ -5335,9 +5057,6 @@ local Library do
             return Metrics.PadTop + ((Index - 1) * (Metrics.Height + Metrics.Gap))
         end
 
-        -- A page's body: the ScrollingFrame with the two columns Sections go into.
-        -- Shared between Page and SubTab — both are "panes" with exactly the same
-        -- content.
         Library.CreatePageBody = function(self, Items)
             Items["Page"] = Instances:Create("ScrollingFrame", {
                 Parent = Library.UnusedHolder.Instance,
@@ -5356,9 +5075,6 @@ local Library do
                 CanvasSize = UDim2.new(0, 0, 0, 0)
             }):AddToTheme({ScrollBarImageColor3 = 'Accent'})
 
-            -- Stacked layout: Sections go one below the other, at full width. The two
-            -- side-by-side columns were removed — with sub-tabs the content is shorter
-            -- and the second column spent most of its time empty.
             Items["Columns"] = Instances:Create("Frame", {
                 Parent = Items["Page"].Instance,
                 Name = "\0",
@@ -5385,8 +5101,6 @@ local Library do
                 SortOrder = Enum.SortOrder.LayoutOrder
             })
 
-            -- Aliases kept: `Side` on Sections became a no-op and everything lands in the
-            -- same container, so older scripts keep working.
             Items["Column"] = Items["Columns"]
             Items["LeftColumn"] = Items["Columns"]
             Items["RightColumn"] = Items["Columns"]
@@ -5419,9 +5133,6 @@ local Library do
             local Metrics = Library.SubTabMetrics
 
             local Items = { } do
-                -- Wrapper: groups the tab button + the sub-tab accordion. It is what goes
-                -- into the sidebar's UIListLayout (which is why the reordering LayoutOrder
-                -- lives here, not on the button).
                 Items["Wrapper"] = Instances:Create("Frame", {
                     Parent = SidebarGroup["Buttons"].Instance,
                     Name = "\0",
@@ -5528,8 +5239,6 @@ local Library do
                     TextXAlignment = Enum.TextXAlignment.Left
                 }):AddToTheme({TextColor3 = 'TextMuted'})
 
-                -- Chevron: only appears once the tab has sub-tabs. Rotates from 0° (closed)
-                -- to 90° (open).
                 Items["Chevron"] = Instances:Create("ImageLabel", {
                     Parent = Items["Background"].Instance,
                     Name = "\0",
@@ -5546,7 +5255,6 @@ local Library do
                     BorderSizePixel = 0
                 }):AddToTheme({ImageColor3 = 'TextMuted'})
 
-                -- Accordion. ClipsDescendants + an animated height = a smooth expansion.
                 Items["SubHolder"] = Instances:Create("Frame", {
                     Parent = Items["Wrapper"].Instance,
                     Name = "\0",
@@ -5576,7 +5284,6 @@ local Library do
                     CornerRadius = UDimNew(1, 0)
                 })
 
-                -- The marker that slides along the rail to the active sub-tab.
                 Items["RailThumb"] = Instances:Create("Frame", {
                     Parent = Items["SubHolder"].Instance,
                     Name = "\0",
@@ -5629,9 +5336,6 @@ local Library do
                 return #Page.SubTabs > 0
             end
 
-            -- If the parent tab has Sections of its own, it stays a clickable pane even
-            -- with sub-tabs. If it does not, clicking it only opens the accordion and
-            -- activates the first sub.
             function Page:HasOwnContent()
                 return (Page.SectionCount or 0) > 0
             end
@@ -5644,9 +5348,6 @@ local Library do
                 return Page
             end
 
-            -- Repositions/resizes the accordion. `Animate` controls whether the height
-            -- tweens or snaps (used in theme refreshes and sidebar collapse, where
-            -- animating would be visual noise).
             function Page:RefreshSubHolder(Animate)
                 local Count = #Page.SubTabs
 
@@ -5660,9 +5361,6 @@ local Library do
                 local Open = Page.Expanded and not Page.Window.IsSidebarCollapsed and not Detached
                 local Height = Open and Library:GetSubHolderHeight(Count) or 0
 
-                -- Stays visible at all times: what "hides" it is the zero height plus
-                -- ClipsDescendants. Toggling Visible here would cut the closing animation in
-                -- half.
                 Items["SubHolder"].Instance.Visible = true
 
                 if Animate then
@@ -5772,7 +5470,6 @@ local Library do
                 end
             end
 
-            -- Called by Window:ActivatePane. Decides nothing — it only applies.
             function Page:SetActive(Bool, Animate)
                 Page.Active = Bool and true or false
 
@@ -5783,7 +5480,6 @@ local Library do
                 Page:RefreshVisualState(Animate ~= false)
             end
 
-            -- Compat: `Page:Turn(true)` was the old activation API.
             function Page:Turn(Bool)
                 if Bool then
                     Page.Window:ActivatePane(Page)
@@ -5806,8 +5502,6 @@ local Library do
                 Page.Window:CloseFlyout()
 
                 if Page.Active or Page.ChildActive then
-                    -- Already the active tab: do not collapse the accordion (the active pane
-                    -- would be left with no indication at all in the sidebar).
                     return
                 end
 
@@ -5851,21 +5545,11 @@ local Library do
 
             return setmetatable(Page, Library.Pages)
         end
--- ============================================================
--- [ modulo: SubTab.lua ]
--- ============================================================
 
 
-        -- ══════════════════════════════════════════════════════════════════
-        -- Sub-tab: um pane filho de uma Page. Renderiza como um item indentado
-        -- inside the parent tab's accordion and has exactly the same content APIs
-        -- as a Page (:Section, :AddSection, ...).
-        -- ══════════════════════════════════════════════════════════════════
         Library.Pages.SubTab = function(self, Data)
             Data = Data or { }
 
-            -- Creating a sub-tab from another sub-tab adds a sibling, rather than
-            -- trying to nest a third level.
             local Parent = self.IsSubTab and self.Parent or self
 
             if not Parent or not Parent.Window then
@@ -5930,8 +5614,6 @@ local Library do
                     Transparency = 1
                 }):AddToTheme({Color = 'OutlineSoft'})
 
-                -- A sub-tab is text only: the parent tab's icon plus the rail already
-                -- give the hierarchy, and a second indented icon only clutters.
                 local TextOffset = 12
 
                 Items["Text"] = Instances:Create("TextLabel", {
@@ -6055,8 +5737,6 @@ local Library do
                 SubTab:RefreshVisualState(false)
             end)
 
-            -- The parent tab gained a chevron: its text has to truncate so it does
-            -- not run underneath it.
             if Parent.Items["Text"] then
                 Parent.Items["Text"].Instance.AutomaticSize = Enum.AutomaticSize.None
                 Parent.Items["Text"].Instance.TextTruncate = Enum.TextTruncate.AtEnd
@@ -6065,13 +5745,9 @@ local Library do
 
             Parent:RefreshVisualState(false)
 
-            -- If the parent was already the active pane but has no content of its
-            -- own, the real content becomes this first sub-tab.
             if Parent.Active and not Parent:HasOwnContent() then
                 SubTab.Window:ActivatePane(SubTab)
             elseif Parent.Active or Parent.ChildActive then
-                -- The parent tab is already active (with its own content): its accordion
-                -- is born open.
                 Parent:SetExpanded(true, false)
             else
                 Parent:RefreshSubHolder(false)
@@ -6079,16 +5755,11 @@ local Library do
 
             return setmetatable(SubTab, Library.Pages)
         end
--- ============================================================
--- [ modulo: Section.lua ]
--- ============================================================
 
 
         Library.Pages.Section = function(self, Data)
             Data = Data or { }
 
-            -- Used by the accordion: a tab with content of its own stays clickable
-            -- even after it gains sub-tabs.
             self.SectionCount = (self.SectionCount or 0) + 1
 
             local Section = {
@@ -6096,8 +5767,6 @@ local Library do
                 Page = self,
 
                 Name = Data.Name or Data.name or "Section",
-                -- `Side` became a no-op when the page moved to a single stacked column.
-                -- Still accepted so no script breaks.
                 Side = Data.Side or Data.side or 1,
                 Icon = Data.Icon or Data.icon or "rbxassetid://127136375066593",
 
@@ -6110,9 +5779,6 @@ local Library do
                 Items["SectionOutline"] = Instances:Create("Frame", {
                     Parent = ColumnParent.Instance,
                     Name = "\0",
-                    -- With everything in one container, creation order has to be explicit:
-                    -- the UIListLayout breaks equal LayoutOrder ties by Name, and every Name
-                    -- here is "\0".
                     LayoutOrder = self.SectionCount,
                     Size = UDim2.new(1, 0, 0, 48),
                     BorderColor3 = FromRGB(0, 0, 0),
@@ -6152,9 +5818,6 @@ local Library do
                     BorderSizePixel = 0
                 })
 
-                -- No icon badge: a section title is text only. `Data.Icon` is still
-                -- accepted (and ignored) so scripts that already pass one do not break.
-                --
                 Items["Text"] = Instances:Create("TextLabel", {
                     Parent = Items["Top"].Instance,
                     Name = "\0",
@@ -6217,9 +5880,6 @@ local Library do
 
             return setmetatable(Section, Library.Sections)
         end
--- ============================================================
--- [ modulo: Toggle.lua ]
--- ============================================================
 
 
         Library.Sections.Toggle = function(self, Data)
@@ -6240,7 +5900,6 @@ local Library do
             }
 
             local Items = { } do
-                -- Adaptive: a taller row on mobile for a bigger hit area
                 local _isMobileToggle = Library:IsMobileClient()
                 local _toggleRowY = _isMobileToggle and 28 or 20
 
@@ -6299,7 +5958,6 @@ local Library do
                     SortOrder = Enum.SortOrder.LayoutOrder
                 })
                 
-                -- Adaptive: a bigger switch on mobile (44x24) vs PC (35x18)
                 local _indW = _isMobileToggle and 44 or 35
                 local _indH = _isMobileToggle and 24 or 18
 
@@ -6394,7 +6052,6 @@ local Library do
 
                     if UseTween then
                         Items["Glow"]:Tween(nil, {ImageTransparency = 1})
-                        -- Subtle bounce when switching on (Back easing gives a slight overshoot)
                         Items["Circle"]:Tween(TweenInfo.new(0.22, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
                             AnchorPoint = Vector2New(1, 0.5),
                             Position = UDim2.new(1, -3, 0.5, 0),
@@ -6460,9 +6117,6 @@ local Library do
             function Toggle:Colorpicker(Data)
                 Data = Data or { }
 
-                -- nil must stay nil all the way to CreateColorpicker: that is where
-                -- the default is decided. An `or false` here would switch the bar off
-                -- every time the field was omitted.
                 local AlphaOption = Data.Alpha
 
                 if AlphaOption == nil then
@@ -6525,13 +6179,10 @@ local Library do
                 Toggle:Set(not Toggle.Value)
             end)
 
-            -- Right-click any toggle → lazy-attach a keybind, start key picking
-            -- and open the Toggle/Hold/Always mode picker. The keybind drives
-            -- the toggle: pressing the bound key flips/holds the toggle state.
             Items["Toggle"]:Connect("MouseButton2Down", function()
                 if not Toggle._RightClickKeybind then
                     Toggle._RightClickKeybind = Toggle:Keybind({
-                        Default = Enum.KeyCode.Backspace,  -- internal lib alias for "None"
+                        Default = Enum.KeyCode.Backspace,
                         Mode = "Toggle",
                         Callback = function(state)
                             Toggle:Set(state == true)
@@ -6558,9 +6209,6 @@ local Library do
             return Toggle 
         end
 
--- ============================================================
--- [ modulo: Button.lua ]
--- ============================================================
 
         Library.Sections.Button = function(self, Data)
             Data = Data or { }
@@ -6643,7 +6291,6 @@ local Library do
                     return
                 end
 
-                -- Press feedback: stroke flash + UIScale punch (cheap, 1 tween each)
                 Items["Stroke"]:ChangeItemTheme({Color = "Accent"})
                 Items["Stroke"]:Tween(nil, {Color = ActiveLibrary.Theme.Accent})
 
@@ -6666,7 +6313,6 @@ local Library do
                 Items["Stroke"]:Tween(nil, {Color = ActiveLibrary.Theme.Outline})
             end
 
-            -- Hover feedback: stroke acende sutilmente
             Items["Button"]:Connect("MouseEnter", function()
                 Items["Button"]:Tween(TweenInfo.new(0.15), {BackgroundColor3 = Library.Theme["Accent"]:Lerp(Library.Theme["Element"], 0.85)})
             end)
@@ -6681,9 +6327,6 @@ local Library do
             return Button
         end
 
--- ============================================================
--- [ modulo: Slider.lua ]
--- ============================================================
 
         Library.Sections.Slider = function(self, Data)
             Data = Data or { }
@@ -6732,8 +6375,6 @@ local Library do
                     TextSize = 16
                 }):AddToTheme({TextColor3 = 'Text'})
                 
-                -- Adaptive: a taller bar on mobile for a bigger hit area (touch-friendly).
-                -- PC keeps 9px (precise with a mouse). Mobile 24px (finger width).
                 local _isMobileSlider = Library:IsMobileClient()
                 local _sliderBarY = _isMobileSlider and 24 or 9
 
@@ -6928,10 +6569,6 @@ local Library do
             end
 
             function Slider:Set(Value)
-                -- Stale autoload configs can pass a table here (e.g. a flag
-                -- name that used to belong to a multi-select dropdown and
-                -- now belongs to a slider). Coerce or fall back to Default
-                -- so the entire config load doesn't blow up on one bad key.
                 if type(Value) ~= "number" then
                     Value = tonumber(Value) or Slider.Default or Slider.Min
                 end
@@ -6999,9 +6636,6 @@ local Library do
             return Slider 
         end
 
--- ============================================================
--- [ modulo: Dropdown.lua ]
--- ============================================================
 
         Library.Sections.Dropdown = function(self, Data)
             Data = Data or { }
@@ -7017,36 +6651,22 @@ local Library do
                 Default = Data.Default or Data.default or nil,
                 Callback = Data.Callback or Data.callback or function() end,
                 Multi = Data.Multi or Data.multi or false,
-                -- Only meaningful with Multi. Turns the dropdown from a SET into a QUEUE:
-                -- it numbers each selected item with its position, and the position is the
-                -- order you clicked in.
-                --
-                -- The order already existed — `Dropdown.Value` is an array and a click does
-                -- `TableInsert` at the end — it just never showed anywhere. Without seeing
-                -- the number, building a queue was trial and error: two identical ticks do
-                -- not say whether "Boss" came before or after "Quests".
                 Ranked = Data.Ranked or Data.ranked or false,
-                -- Search is always visible now, so the threshold became a no-op. Still
-                -- accepted so it does not break scripts that already pass it.
                 SearchThreshold = Data.SearchThreshold or Data.searchthreshold or 6,
 
                 Value = { },
                 Options = { },
-                -- A value that arrived before the option existed in the list. Held here
-                -- until a `Refresh` brings the option in. See `Set`.
                 Pending = nil,
                 IsOpen = false
             }
 
-            -- Inline drawer metrics (opens below the field, pushing the section's
-            -- following elements down — it is no longer a side panel).
             local DrawerPad = 8
             local DrawerGap = 6
             local SearchHeight = 30
             local SearchGap = 8
             local OptionHeight = 32
             local OptionGap = 6
-            local MaxListHeight = 184 -- exactly 5 options; the rest scrolls
+            local MaxListHeight = 184
             local ListTop = DrawerPad + SearchHeight + SearchGap
 
             local HeaderHeight = 52
@@ -7131,9 +6751,6 @@ local Library do
                     Parent = Items["RealDropdown"].Instance,
                     Name = "\0",
                     ImageColor3 = Library.Theme["Text"],
-                    -- The art points down at 0°: closed = ▼, open = ▲. (It was 270°/90° — a
-                    -- sideways arrow — from when the panel opened to the side instead of
-                    -- below.)
                     Rotation = 0,
                     BorderColor3 = FromRGB(0, 0, 0),
                     AnchorPoint = Vector2New(1, 0.5),
@@ -7155,8 +6772,6 @@ local Library do
                     BackgroundColor3 = Library.Theme["Outline"]
                 }):AddToTheme({BackgroundColor3 = 'Outline'})
 
-                -- Drawer: a child of the Dropdown itself, right below the field.
-                -- ClipsDescendants + an animated height = a smooth expansion.
                 Items["OptionHolder"] = Instances:Create("Frame", {
                     Parent = Items["Dropdown"].Instance,
                     Name = "\0",
@@ -7201,7 +6816,6 @@ local Library do
                     BorderSizePixel = 0
                 }):AddToTheme({ScrollBarImageColor3 = 'Accent'})
 
-                -- Search: always visible, however many options there are.
                 Items["SearchFrame"] = Instances:Create("Frame", {
                     Parent = Items["OptionHolder"].Instance,
                     Name = "\0",
@@ -7321,8 +6935,6 @@ local Library do
                 return ListTop + GetListHeight() + DrawerPad
             end
 
-            -- Recomputes the position/size of the field, the drawer and the row itself.
-            -- `Animate` is only used when the open/closed state changes.
             local function RefreshLayout(Animate)
                 local DropdownWidth = Items["Dropdown"].Instance.AbsoluteSize.X
 
@@ -7439,9 +7051,6 @@ local Library do
                     Items["Stroke"]:Tween(nil, {Color = Library.Theme.Outline})
                     Items["Icon"]:Tween(ArrowTweenInfo, {Rotation = 0})
 
-                    -- Hide the holder as soon as the animation ends: a zero-height frame still
-                    -- draws its UIStroke, and the border becomes a thin line just below the
-                    -- field.
                     task.delay(CloseTweenInfo.Time, function()
                         if CurrentTransition == TransitionId and not Dropdown.IsOpen then
                             Items["OptionHolder"].Instance.Visible = false
@@ -7453,16 +7062,11 @@ local Library do
                 RefreshLayout(true)
             end
 
-            -- The field's text AND each option's label, in one place. They have to agree
-            -- and used to be written from two different places (`Set` and the option
-            -- click) — which even disagreed on the empty-list placeholder: one wrote
-            -- "--" and the other "...".
             local function RefreshMultiText()
                 if not Dropdown.Multi then
                     return
                 end
 
-                -- name -> position in the queue
                 local Order = { }
                 for Index, Name in Dropdown.Value do
                     Order[Name] = Index
@@ -7502,18 +7106,11 @@ local Library do
                     Dropdown.Value = Option
                     Library.Flags[Dropdown.Flag] = Option
 
-                    -- Clear before ticking: `Set` means "the selection is THIS", the same as the
-                    -- single-select branch below. Without it, loading a second config only
-                    -- ADDED — the previous config's ticks stayed lit on screen, disagreeing with
-                    -- the real flag value.
                     for Index, OptionData in Dropdown.Options do
                         OptionData.Selected = false
                         OptionData:Toggle("Inactive")
                     end
 
-                    -- Anything not yet in the list is ignored here but STAYS in
-                    -- `Dropdown.Value` — that is where `Refresh` re-applies it from once the
-                    -- list finally arrives.
                     for Index, Value in Option do
                         local OptionData = Dropdown.Options[Value]
 
@@ -7528,18 +7125,6 @@ local Library do
                     RefreshMultiText()
                 else
                     if not Dropdown.Options[Option] then
-                        -- The option does not exist in the list yet. That is the RULE, not the
-                        -- exception, during autoload: the config is applied ~0.3s after the window
-                        -- is born, and lists coming from an async source (an HTTP fetch, the game's
-                        -- GUI, the player's character) are still on their fallback or empty at that
-                        -- moment.
-                        --
-                        -- The value used to be discarded here, silently, and the Callback never
-                        -- ran — the user saw the config "load" with nothing changing. Now it stays
-                        -- pending and `Refresh` applies it once the option appears.
-                        --
-                        -- The Flag is written all the same: without that, saving the config while
-                        -- the list had not arrived ERASED the stored choice.
                         Dropdown.Pending = Option
                         Library.Flags[Dropdown.Flag] = Option
                         return
@@ -7685,12 +7270,8 @@ local Library do
 
                         Library.Flags[Dropdown.Flag] = Dropdown.Value
 
-                        -- Renumbers the WHOLE list, not just the clicked item: removing the 2nd of a
-                        -- queue of 4 promotes the two below it.
                         RefreshMultiText()
                     else
-                        -- A manual choice wins: discard whatever was pending from the config,
-                        -- otherwise the next `Refresh` would overwrite what the user just clicked.
                         Dropdown.Pending = nil
 
                         if OptionData.Selected then
@@ -7723,8 +7304,6 @@ local Library do
                         Library:SafeCall(Dropdown.Callback, Dropdown.Value)
                     end
 
-                    -- Single-select closes the drawer on choosing; multi keeps it open so you
-                    -- can tick several at once.
                     if not Dropdown.Multi then
                         Dropdown:SetOpen(false)
                     end
@@ -7756,16 +7335,6 @@ local Library do
                     Dropdown:Add(Value)
                 end
 
-                -- Re-applies the selection now that the list changed. Two holes this closes:
-                --
-                --   * the value left pending in `Set` (config applied before the list
-                --     existed) finally lands;
-                --   * swapping the list left the selection orphaned — `Value` still pointed
-                --     at the old item, no option was ticked and the Callback was never told
-                --     about the change.
-                --
-                -- If the option still does not exist, `Set` simply re-pends it and tries
-                -- again on the next Refresh.
                 local Wanted = Dropdown.Pending or Dropdown.Value
 
                 if Dropdown.Multi then
@@ -7824,9 +7393,6 @@ local Library do
             return Dropdown
         end
 
--- ============================================================
--- [ modulo: Label.lua ]
--- ============================================================
 
         Library.Sections.Label = function(self, Name)
             local Label = {
@@ -7923,9 +7489,6 @@ local Library do
             function Label:Colorpicker(Data)
                 Data = Data or { }
 
-                -- nil must stay nil all the way to CreateColorpicker: that is where
-                -- the default is decided. An `or false` here would switch the bar off
-                -- every time the field was omitted.
                 local AlphaOption = Data.Alpha
 
                 if AlphaOption == nil then
@@ -7992,9 +7555,6 @@ local Library do
             return Label
         end
 
--- ============================================================
--- [ modulo: Textbox.lua ]
--- ============================================================
 
         Library.Sections.Textbox = function(self, Data)
             Data = Data or { }
@@ -8080,9 +7640,6 @@ local Library do
                     Parent = Items["Background"].Instance,
                     Name = "\0",
                     FontFace = Library.Font,
-                    -- Active+Selectable MUST be true on the TextBox itself or
-                    -- click-to-focus and keyboard input never fire on mobile
-                    -- (and on PC the cursor wouldn't appear after clicking).
                     Active = true,
                     Selectable = true,
                     TextTransparency = 0,
@@ -8217,9 +7774,6 @@ local Library do
             return Textbox
         end
     end
--- ============================================================
--- [ modulo: SettingsPage.lua ]
--- ============================================================
 
 
     Library.CreateSettingsPage = function(self, Window, Watermark)
@@ -8299,14 +7853,13 @@ local Library do
             local ThemingSection = SettingsPage:Section({Name = "Theming", Icon = "rbxassetid://73803440257131", Side = 2})
 
             do
-                -- Preset dropdown: applies every colour at once
                 local presetNames = {}
                 for name in pairs(Library.Themes or {}) do
                     table.insert(presetNames, name)
                 end
                 table.sort(presetNames)
 
-                local colorpickerHandles = {}  -- Index -> colorpicker (to refresh the visuals)
+                local colorpickerHandles = {}
 
                 ThemingSection:Dropdown({
                     Name = "Preset",
@@ -8315,7 +7868,6 @@ local Library do
                     Default = Library.CurrentThemeName or "Preset",
                     Callback = function(Value)
                         if Library:ApplyThemePreset(Value) then
-                            -- Refreshes the colorpickers visually to reflect the new theme
                             for Index, picker in pairs(colorpickerHandles) do
                                 local newColor = Library.Theme[Index]
                                 if newColor and picker.Set then
@@ -8326,7 +7878,6 @@ local Library do
                     end
                 })
 
-                -- Background image: a textbox for an Asset ID or URL
                 ThemingSection:Textbox({
                     Name = "Background Image",
                     Flag = "BackgroundImage",
@@ -8349,13 +7900,10 @@ local Library do
                     end
                 })
 
-                -- Individual colorpickers (one per theme colour)
                 for Index, Value in Library.Theme do
                     local picker = ThemingSection:Label(Index):Colorpicker({
                         Flag = Index.."_ThemingThing",
                         Default = Value,
-                        -- Explicit opt-out: ChangeTheme takes a colour and nothing
-                        -- else, so the bar here would be a control that does nothing.
                         Alpha = false,
                         Callback = function(Value)
                             Library.Theme[Index] = Value
@@ -8380,8 +7928,6 @@ local Library do
                     end
                 end
 
-                -- Backwards-compat helpers for the rest of the section. Status
-                -- info now flows through notifications + the AutoloadLabel only.
                 local function SetConfigStatus(Text) end
                 local function SetConfigFeedback(Text, Duration, Title)
                     NotifySettings(Text, Duration, Title)
@@ -8415,8 +7961,6 @@ local Library do
                     return List
                 end
 
-                -- Compact one-liner showing the current autoload. Updates on
-                -- Set/Clear Autoload. No "Status: ready" clutter.
                 AutoloadLabel = ConfigsSection:Label("Autoload • off")
 
                 ConfigsSection:Toggle({
@@ -8595,15 +8139,11 @@ local Library do
 
         return SettingsPage
     end
--- ============================================================
--- [ modulo: IconPacks.lua ]
--- ============================================================
 
 end
 
 
 
--- loadstring-friendly wrappers / aliases
 Library.LucideIconsUrl = "https://raw.githubusercontent.com/Footagesus/Icons/refs/heads/main/lucide/dist/Icons.lua"
 Library.IconPacks = Library.IconPacks or {}
 Library.ActiveIconPack = "lucide"
@@ -8668,48 +8208,16 @@ function Library:ResolveIcon(Icon, PackName)
     local Icons = self:GetIconPack(PackName)
     return Icons[string.lower(Icon)] or Icon
 end
--- ============================================================
--- [ modulo: Analytics.lua ]
--- ============================================================
 
 
-    -- ══════════════════════════════════════════════════════════════════════
-    -- Execution counter
-    -- ══════════════════════════════════════════════════════════════════════
-    -- One beat per execution, fired by `CreateWindow` — the single point every
-    -- script in the hub passes through. That way no script has to remember to
-    -- call anything, and a new script is counted from birth.
-    --
-    -- The name sent to the server is the window's `SubName` ("Shindo Life",
-    -- "Bizarre Lineage"), which is the same name the user sees. If SubName ever
-    -- changes, that script's historical series splits in two — worth remembering
-    -- before renaming.
-    --
-    -- Three rules this must NEVER break, because it runs at everything's boot:
-    --   * does not block   — `task.spawn`, and the result is ignored
-    --   * does not throw   — all in pcall, an executor without HTTP just does not count
-    --   * does not repeat  — once per execution, even with two CreateWindow calls
 
-    -- Services resolved HERE, not inherited from the top of the bundle.
-    --
-    -- Not fussiness: the Header's `local Library do` closes before IconPacks, so
-    -- every module from there down — this one included — is OUTSIDE the scope
-    -- where `HttpService` and `LocalPlayer` exist. Inheriting gave nil, and the
-    -- `pcall` turned that into "the counter simply does not count". Diagnosed
-    -- from: `encode failed: attempt to index nil with 'JSONEncode'`.
     local HttpService = game:GetService("HttpService")
     local LocalPlayer = game:GetService("Players").LocalPlayer
 
-    -- The Discloud domain while there is no domain of our own. When getdzhub.xyz
-    -- goes live pointing at this same app, just change it here — or set
-    -- `getgenv().VyHub_ExecApi` before loading the lib, with nothing to republish.
     Library.ExecApi = "https://getdzhub.discloud.app/api/exec"
     Library.PingApi = "https://getdzhub.discloud.app/api/ping"
     Library._ExecReported = false
 
-    -- Presence ping interval. The server counts as online anyone seen in the last
-    -- 150s — two and a half pings — so one lost ping (lag, a server change) does
-    -- not blink someone to offline.
     Library.PingEvery = 60
 
     Library.ResolveHttpRequest = function(self)
@@ -8727,8 +8235,6 @@ end
 
         local Environment = (getgenv and getgenv()) or _G
 
-        -- Escape hatch: an executor that hangs on `request`, or someone running
-        -- locally who does not want to add to the production counter.
         if Environment.VyHub_NoTelemetry then
             return false, "opted out"
         end
@@ -8740,10 +8246,6 @@ end
 
         local Name = tostring(ScriptName or "unknown")
 
-        -- Reason for the last failure, for diagnosis. Swallowing the error is right
-        -- at runtime (the counter must never take the hub down), but swallowing it
-        -- WITHOUT a trace is how an afternoon is lost asking "why is the number not
-        -- going up?". Just read `Library._ExecError`.
         self._ExecError = nil
 
         task.spawn(function()
@@ -8753,8 +8255,6 @@ end
                 return
             end
 
-            -- Which executor people actually use. Not curiosity: it is what says where to
-            -- spend time when something breaks on only one of them.
             local Executor = "Unknown"
             pcall(function()
                 if identifyexecutor then
@@ -8796,19 +8296,6 @@ end
         return true
     end
 
-    -- ── Presence ─────────────────────────────────────────────────────────
-    -- Says "still running" every so often, and it is what lets the site show how
-    -- many people are using the hub RIGHT NOW.
-    --
-    -- Built to be the cheapest call there is: a GET with the id in the query, no
-    -- body to build, no JSON to serialize, and the server answers `204 No
-    -- Content` — zero bytes back. The URL is built ONCE, outside the loop,
-    -- because the only part that changes between one ping and the next is nothing.
-    --
-    -- It dies with the interface: the loop checks `Unloading`/`Unloaded` every
-    -- round, so closing the hub removes the person from the count within 150s on
-    -- its own, with nobody to notify. Someone who kills Roblox outright drops out
-    -- the same way.
     Library.StartPresence = function(self)
         if self._PresenceOn then
             return false
@@ -8836,9 +8323,6 @@ end
         task.spawn(function()
             while not (self.Unloading or self.Unloaded) do
                 pcall(Request, { Url = Full, Method = "GET" })
-                -- Sliced into 1s pieces rather than one flat `task.wait(60)`: that way
-                -- unloading the interface ends the thread almost immediately, instead of
-                -- leaving it hanging for up to a minute.
                 for _ = 1, self.PingEvery do
                     if self.Unloading or self.Unloaded then
                         break
@@ -8851,18 +8335,12 @@ end
 
         return true
     end
--- ============================================================
--- [ modulo: CreateWindow.lua ]
--- ============================================================
 
 
 local OriginalWindowFunction = Library.Window
 Library.Window = function(self, Data)
     Data = Data or {}
 
-    -- `Theme = "Onyx"` picks a preset before anything is drawn, so the window
-    -- is built in its colours instead of being recoloured afterwards. An
-    -- unknown name is ignored and the current theme (Onyx) stays.
     local ThemeName = Data.Theme or Data.theme
     if type(ThemeName) == "string" and ThemeName ~= "" then
         pcall(function() self:ApplyThemePreset(ThemeName) end)
@@ -8986,8 +8464,6 @@ Library.CreateWindow = function(self, Data)
     local OriginalPage = Window.Page
     local CreatingSettings = false
 
-    -- The LayoutOrder lives on the Wrapper (tab button + sub-tab accordion),
-    -- which is the direct child of the sidebar's UIListLayout.
     local function GetTabLayoutItem(Page)
         if type(Page) ~= "table" or type(Page.Items) ~= "table" then
             return nil
@@ -9032,33 +8508,7 @@ Library.CreateWindow = function(self, Data)
     Window.AddSettingsPage = Window.CreateSettingsPage
     Window.CreateSettings = Window.CreateSettingsPage
 
-    -- ════════════════════════════════════════════════════════════════════
-    -- CreateInfoPage(opts) — builds an "Info" tab with a rich layout:
-    --   • Welcome banner (avatar + name + tags)
-    --   • Stats row (4 cards: Players, FPS, Ping, Uptime — auto-updating)
-    --   • Credits + Key Info grid (2 cols)
-    --
-    -- EVERYTHING has a default: `Window:CreateInfoPage()` with no arguments
-    -- already builds the whole tab (stats loop included). Pass only what you want
-    -- to override.
-    --
-    -- opts = {
-    --   tabName    = "Info" (default),
-    --   tabIcon    = "info" (default),
-    --   subtitle   = Library.DefaultInfoSubtitle,
-    --   gameName   = Window.SubName,        -- used in Key Info's "Game:" line
-    --   devMode    = false,                 -- swaps the "Live" tag for "DevMode"
-    --   tags       = {"Free", "Live"},      -- chips in the right corner
-    --   credits    = Library.DefaultInfoCredits,
-    --   keyInfo    = {Game/Place ID/Game ID/Job ID},
-    --   discordLink   = Library.DefaultDiscordLink,
-    --   onCopyDiscord = function() end,     -- default: copies discordLink
-    --   autoStats  = true,                  -- false disables the stats loop
-    -- }
-    -- Returns: page, statHandles {players, fps, ping, uptime} (each has :SetText)
-    -- ════════════════════════════════════════════════════════════════════
     function Window:CreateInfoPage(opts)
-        -- Shallow copy: the defaults below must not leak into the caller's table.
         local Source = type(opts) == "table" and opts or {}
         opts = {}
 
@@ -9115,13 +8565,10 @@ Library.CreateWindow = function(self, Data)
         })
         if not page then return nil, nil end
 
-        -- Hide the default column layout (we use our own)
         local pageInst = page.Items.Page.Instance
         local columnsInst = page.Items.Columns and page.Items.Columns.Instance
         if columnsInst then columnsInst.Visible = false end
 
-        -- Helper: creates an instance and registers it in the Library's ThemeItems, so
-        -- changing the theme updates its colours automatically.
         local function themed(class, parent, props, themeMap)
             local inst = Instance.new(class)
             for k, v in pairs(props or {}) do
@@ -9134,7 +8581,6 @@ Library.CreateWindow = function(self, Data)
             return inst
         end
 
-        -- Custom container inside the Page
         local container = Instance.new("Frame")
         container.Name = "InfoContainer"
         container.BackgroundTransparency = 1
@@ -9150,7 +8596,6 @@ Library.CreateWindow = function(self, Data)
 
         Instance.new("UIPadding", container).PaddingTop = UDimNew(0, 14)
 
-        -- Helper: creates a standard card (themed background + corner + themed stroke)
         local function makeCard(parent, layoutOrder, height)
             local card = themed("Frame", parent, {
                 Name = "Card",
@@ -9170,7 +8615,6 @@ Library.CreateWindow = function(self, Data)
 
         local LocalPlayer = game:GetService("Players").LocalPlayer
 
-        -- ── Welcome Banner ─────────────────────────────────────────────
         local banner = makeCard(container, 1, 88)
         local bannerPadding = Instance.new("UIPadding", banner)
         bannerPadding.PaddingLeft = UDimNew(0, 16)
@@ -9178,7 +8622,6 @@ Library.CreateWindow = function(self, Data)
         bannerPadding.PaddingTop = UDimNew(0, 14)
         bannerPadding.PaddingBottom = UDimNew(0, 14)
 
-        -- Avatar circular (themed)
         local avatar = themed("ImageLabel", banner, {
             Size = UDim2.new(0, 60, 0, 60),
             AnchorPoint = Vector2New(0, 0.5),
@@ -9195,7 +8638,6 @@ Library.CreateWindow = function(self, Data)
             avatar.Image = thumb
         end)
 
-        -- "Welcome back," small label
         themed("TextLabel", banner, {
             BackgroundTransparency = 1,
             Position = UDim2.new(0, 76, 0, 8),
@@ -9206,7 +8648,6 @@ Library.CreateWindow = function(self, Data)
             TextSize = 14,
         }, { TextColor3 = "TextMuted" })
 
-        -- Username big
         themed("TextLabel", banner, {
             BackgroundTransparency = 1,
             Position = UDim2.new(0, 76, 0, 24),
@@ -9217,7 +8658,6 @@ Library.CreateWindow = function(self, Data)
             TextSize = 22,
         }, { TextColor3 = "Text" })
 
-        -- Subtitle
         if opts.subtitle then
             themed("TextLabel", banner, {
                 BackgroundTransparency = 1,
@@ -9230,7 +8670,6 @@ Library.CreateWindow = function(self, Data)
             }, { TextColor3 = "TextMuted" })
         end
 
-        -- Tags (chips na direita)
         if type(opts.tags) == "table" and #opts.tags > 0 then
             local tagsHolder = Instance.new("Frame")
             tagsHolder.BackgroundTransparency = 1
@@ -9258,7 +8697,6 @@ Library.CreateWindow = function(self, Data)
                 pad.PaddingLeft = UDimNew(0, 12)
                 pad.PaddingRight = UDimNew(0, 12)
                 if i == 1 then
-                    -- Accent tag: AccentText stays readable on the accent fill
                     themed("TextLabel", chip, {
                         BackgroundTransparency = 1,
                         Size = UDim2.new(0, 0, 1, 0),
@@ -9280,7 +8718,6 @@ Library.CreateWindow = function(self, Data)
             end
         end
 
-        -- ── Stats Row (4 cards) ────────────────────────────────────────
         local statsRow = Instance.new("Frame")
         statsRow.BackgroundTransparency = 1
         statsRow.Size = UDim2.new(1, 0, 0, 80)
@@ -9339,7 +8776,6 @@ Library.CreateWindow = function(self, Data)
             uptime = makeStatCard("Uptime", "0s"),
         }
 
-        -- ── Bottom Grid (Credits + Key Info) ──────────────────────────
         local bottomRow = Instance.new("Frame")
         bottomRow.BackgroundTransparency = 1
         bottomRow.Size = UDim2.new(1, 0, 0, 0)
@@ -9401,13 +8837,7 @@ Library.CreateWindow = function(self, Data)
         makeInfoCard("Credits", opts.credits or {})
         local keyInfoCard = makeInfoCard(opts.keyInfoTitle or "Game Info", opts.keyInfo or {})
 
-        -- Optional: Copy Discord button — uses the REAL Library.Sections.Button via a
-        -- fake section pointing at the Game Info card. That way it inherits all the
-        -- original button's animations (hover lerp, UIScale punch, stroke flash)
-        -- without replicating them by hand.
         if type(opts.onCopyDiscord) == "function" then
-            -- A wrapper mimicking the interface Library.Sections.Button expects:
-            -- self.Items["Content"].Instance = the parent the button is created in
             local fakeSection = {
                 Window = Window,
                 Page = page,
@@ -9420,17 +8850,11 @@ Library.CreateWindow = function(self, Data)
                 Name = "Copy Discord",
                 Callback = opts.onCopyDiscord,
             })
-            -- Reorder to the end of the card (after the title and rows)
             if btn and btn.Items and btn.Items["Button"] then
                 btn.Items["Button"].Instance.LayoutOrder = 99
             end
         end
 
-        -- ── Auto-stats ───────────────────────────────────────────────────
-        -- Feeds the 4 cards (players/fps/ping/uptime) once a second. Every hub script
-        -- used to run this same loop by hand — and with raw Connect/task.spawn, which
-        -- survived :Unload(). Here it uses Library:Connect + Library:Thread, so it
-        -- goes away with the lib. Pass autoStats = false to feed the cards yourself.
         if statHandles and opts.autoStats ~= false then
             local StatsPlayers = game:GetService("Players")
             local StatsRunService = game:GetService("RunService")
@@ -9501,10 +8925,6 @@ Library.CreateWindow = function(self, Data)
     Window.CreateTab = WrappedPage
     Window.CreatePage = WrappedPage
 
-    -- ── Loading overlay control ──────────────────────────────────────
-    -- Hide the overlay once the host script finishes adding tabs/sections.
-    -- Either call Window:HideLoading() manually for instant feedback, or
-    -- the auto-fallback kicks in after 4s.
     function Window:HideLoading()
         if not Window.IsLoading then return end
         Window.IsLoading = false
@@ -9527,7 +8947,6 @@ Library.CreateWindow = function(self, Data)
         end)
     end
 
-    -- Safety net: auto-hide after 4s if the host script never calls it
     task.delay(4, function()
         if Window.IsLoading then
             Window:HideLoading()
@@ -9536,17 +8955,11 @@ Library.CreateWindow = function(self, Data)
 
     Library:ScheduleAutoload()
 
-    -- One beat on the execution counter. At the end on purpose: if anything above
-    -- throws, the window was never born and the execution should not count. See
-    -- `Library.ReportExecution` — does not block, does not throw, does not repeat.
     Library:ReportExecution(Window.SubName or Data.SubName or Data.Name)
     Library:StartPresence()
 
     return Window
 end
--- ============================================================
--- [ modulo: Aliases.lua ]
--- ============================================================
 
 
 Library.CreateTab = Library.Page
@@ -9606,7 +9019,6 @@ function Library:AddTab(NameOrData, Icon)
     return self:Page(Data)
 end
 
--- Sub-tabs are text only (no icon), which is why the signature takes none.
 function Library.Pages:AddSubTab(NameOrData)
     return self:SubTab(NormalizeNamedData(NameOrData))
 end
@@ -9704,17 +9116,11 @@ function Library.Sections:AddLabel(TextOrData)
     return self:CreateLabel(TextOrData)
 end
 
--- A colorpicker is a sub-element: it lives inside a Toggle or a Label, never
--- loose on a Section. So the shim creates the hosting Label and returns the
--- picker, which makes the call look like every other AddX. Anyone already
--- holding a Toggle keeps using `Toggle:Colorpicker(Data)`, the usual path.
 function Library.Sections:Colorpicker(Data)
     Data = Data or { }
 
     local Host = self:CreateLabel(Data.Name or Data.name or Data.Text or Data.text or "Colorpicker")
 
-    -- `or` will not do for Alpha: false is a valid value (the opt-out) and would
-    -- be discarded as if it were absent.
     local AlphaOption = Data.Alpha
 
     if AlphaOption == nil then
@@ -9728,7 +9134,6 @@ function Library.Sections:Colorpicker(Data)
         Alpha = AlphaOption
     })
 
-    -- Keeps the Label around so the text can be changed later (Picker.Label:SetText).
     if type(Picker) == "table" then
         Picker.Label = Host
     end
@@ -9747,8 +9152,6 @@ function Library.Sections:AddColorpicker(NameOrData, DefaultOrCallback, Callback
         Name = NameOrData
     }
 
-    -- Positional form: the default colour is optional, so the 2nd argument may be
-    -- either the colour or already the callback.
     if type(DefaultOrCallback) == "function" then
         Data.Callback = DefaultOrCallback
     else
@@ -9758,9 +9161,6 @@ function Library.Sections:AddColorpicker(NameOrData, DefaultOrCallback, Callback
 
     return self:CreateColorpicker(Data)
 end
--- ============================================================
--- [ modulo: Footer.lua ]
--- ============================================================
 
 
 getgenv().Library = Library
